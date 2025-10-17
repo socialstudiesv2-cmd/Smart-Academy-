@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>منصة امتحانات إلكترونية — 4 صفوف</title>
+<style>
+  :root{
+    --bg:#0b0f14; --card:#0f1720; --muted:#94a3b8; --accent:#ff5a5f;
+    --accent2:#7c3aed; --glass:rgba(255,255,255,0.03);
+    --success:#16a34a; --danger:#ef4444; --glass-2: rgba(255,255,255,0.02);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#050608 0%, #081018 100%);color:#e6eef8;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:28px 12px}
+  .container{width:100%;max-width:1100px}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+  .logo{background:linear-gradient(90deg,var(--accent),var(--accent2));padding:10px 14px;border-radius:10px;font-weight:700;color:white;box-shadow:0 6px 24px rgba(124,58,237,0.14)}
+  h1{margin:0;font-size:20px}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:4px}
+
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+  .section-title{font-size:14px;margin:0 0 12px 0;color:#fff}
+
+  select,input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--glass);background:transparent;color:inherit}
+  button{cursor:pointer;padding:10px 12px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600}
+  .muted{color:var(--muted);font-size:13px}
+  .exam-item{background:var(--glass);padding:10px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+  .exam-item small{color:var(--muted)}
+  .q-box{background:var(--card);padding:12px;border-radius:8px;margin-bottom:12px;border:1px solid var(--glass-2)}
+  .choices label{display:block;padding:6px 8px;border-radius:6px;margin:6px 0;cursor:pointer;border:1px solid transparent}
+  .choices input{margin-inline-start:6px}
+  .choices label:hover{background:rgba(255,255,255,0.02)}
+  .choices .selected{border-color:rgba(124,58,237,0.5);background:linear-gradient(90deg, rgba(124,58,237,0.06), transparent)}
+  .result-badge{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700}
+  .success{background:rgba(22,163,74,0.12);color:var(--success)}
+  .danger{background:rgba(239,68,68,0.08);color:var(--danger)}
+  .space{height:12px}
+  .history-list{max-height:260px;overflow:auto}
+  .history-item{padding:8px;border-radius:8px;background:var(--glass-2);display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+  .small-btn{padding:6px 8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);cursor:pointer}
+  .top-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  footer{color:var(--muted);font-size:13px;margin-top:14px;text-align:center}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">EMEX</div>
+      <div>
+        <h1>منصة امتحانات إلكترونية — ٤ صفوف</h1>
+        <div class="subtitle">واجهة داكنة احترافية — نتائج محفوظة محليًا — زر إرسال على واتساب</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- sidebar -->
+      <aside class="card" aria-label="التحكم">
+        <p class="section-title">اختار الصف والامتحان</p>
+
+        <label class="muted">اختر الصف</label>
+        <select id="gradeSelect" aria-label="اختر الصف"></select>
+
+        <div class="space"></div>
+
+        <div class="top-row">
+          <div style="flex:1">
+            <label class="muted">قائمة الامتحانات</label>
+            <div id="examsList"></div>
+          </div>
+        </div>
+
+        <div class="space"></div>
+        <label class="muted">اسم الطالب</label>
+        <input type="text" id="studentName" placeholder="اكتب اسم الطالب..." />
+
+        <div class="space"></div>
+        <button id="startBtn">ابدأ الامتحان</button>
+
+        <div class="space"></div>
+        <p class="section-title">سجل النتائج (محلي)</p>
+        <div class="muted" style="margin-bottom:8px">سجل النتائج محفوظ على متصفحك ويمكن تصديره أو حذفه.</div>
+        <div style="display:flex;gap:8px">
+          <button id="exportCsv" class="small-btn">تصدير CSV</button>
+          <button id="clearHistory" class="small-btn">حذف الكل</button>
+        </div>
+
+        <div class="space"></div>
+        <p class="section-title">آخر النتائج</p>
+        <div class="history-list" id="history"></div>
+
+        <footer>صنع لك يا إيهاب · EMEX</footer>
+      </aside>
+
+      <!-- main -->
+      <main class="card" id="mainCard">
+        <div id="welcomeView">
+          <h3 class="section-title">جاهز للاختبار؟</h3>
+          <p class="muted">اختَر الصف ثم الامتحان واضغط "ابدأ الامتحان". ستظهر لك الأسئلة على نفس الصفحة.</p>
+
+          <div style="margin-top:12px">
+            <p class="muted">ملاحظة: زر "إرسال على واتساب" يفتح محادثة على الرقم: <strong>+201559116736</strong></p>
+            <p class="muted">المنصة تعمل بدون خادم. أي نتيجة تُظهرها ستُحفظ على جهاز الطالب فقط حتى تحذفها يدويًا.</p>
+          </div>
+        </div>
+
+        <div id="examView" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h3 id="examTitle" class="section-title"></h3>
+              <div class="muted" id="examMeta"></div>
+            </div>
+            <div>
+              <button id="finishBtn" style="background:linear-gradient(90deg,var(--accent),var(--accent2))">سلم الاجابات</button>
+            </div>
+          </div>
+
+          <div id="questionsArea" style="margin-top:12px"></div>
+          <div id="examMsg" class="muted" style="margin-top:6px"></div>
+        </div>
+
+        <div id="resultView" style="display:none">
+          <h3 class="section-title">النتيجة</h3>
+          <div id="scoreBox" style="margin-bottom:12px"></div>
+          <div id="detailsArea"></div>
+
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+            <button id="sendWhatsBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);">إرسال النتيجة على واتساب</button>
+            <button id="saveLocalBtn" class="small-btn">احفظ النتيجة محليًا</button>
+            <button id="backBtn" class="small-btn">العودة</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+<script>
+/* ===== بيانات الامتحانات (تقدر تعدلها بسهولة هنا) =====
+   4 صفوف: رابع، خامس، سادس ابتدائي، أول إعدادي
+   كل امتحان: title, questions: [{text, choices[], answer}]
+*/
+const WHATS_NUMBER = '201559116736'; // الرقم بدون "+"
+const GRADES = [
+  { id: 'g4', name: 'الصف الرابع الابتدائي' },
+  { id: 'g5', name: 'الصف الخامس الابتدائي' },
+  { id: 'g6', name: 'الصف السادس الابتدائي' },
+  { id: 'g7', name: 'الصف الأول الإعدادي' }
+];
+
+const EXAMS = {
+  g4: [
+    { id: 'g4-e1', title: 'امتحان قرآن - تجريبي', questions: [
+      { text: 'ما هو جمع كلمة "كتاب"؟', choices:['كتب','كتبان','كتبا','كتبة'], answer:'كتب' },
+      { text: 'كم عدد أيام الأسبوع؟', choices:['5','6','7','8'], answer:'7' },
+      { text: 'ما الحيوان الذي يصدر اللبن؟', choices:['جمل','ماعز','أسد','ذئب'], answer:'ماعز' }
+    ]},
+    { id: 'g4-e2', title: 'اللغة العربية - اختبار سريع', questions: [
+      { text: 'أين تكتب همزة القطع؟', choices:['أمام الكلمة','وسط الكلمة','وبنطقها','في آخر الكلمة'], answer:'أمام الكلمة' },
+      { text: 'مرّوا --- الحديقة', choices:['في','على','إلى','من'], answer:'إلى' },
+      { text: 'مرادف سريع هو', choices:['بطيء','سريع','قوي','واضح'], answer:'سريع' }
+    ]}
+  ],
+  g5: [
+    { id: 'g5-e1', title: 'رياضيات - أعداد', questions:[
+      { text: 'نتيجة 7 × 8 = ؟', choices:['54','56','58','48'], answer:'56' },
+      { text: 'العدد الأولي أصغر من 10 هو', choices:['9','7','8','6'], answer:'7' },
+      { text: 'نصف 50 =', choices:['15','20','25','30'], answer:'25' }
+    ]},
+    { id: 'g5-e2', title: 'علوم - نباتات', questions:[
+      { text: 'الموقع الذي يحدث فيه البناء الضوئي هو', choices:['الجذر','الورقة','الساق','الزهرة'], answer:'الورقة' },
+      { text: 'النبات يعطي ثماراً لأنه', choices:['يتكاثر','يتغذى','ينهار','يطفو'], answer:'يتكاثر' },
+      { text: 'المادة اللازمة للنمو هي', choices:['ماء','حليب','زيت','سكر'], answer:'ماء' }
+    ]}
+  ],
+  g6: [
+    { id: 'g6-e1', title: 'تاريخ - حضارات', questions:[
+      { text: 'أحد أنهار وادي النيل هو', choices:['شنگرى','النيل','الأمازون','الغانج'], answer:'النيل' },
+      { text: 'خط الزمان يقيس', choices:['المكان','الزمن','الوزن','الحجم'], answer:'الزمن' },
+      { text: 'عاصمة مصر الحالية هي', choices:['الإسكندرية','الأقصر','القاهرة','أسوان'], answer:'القاهرة' }
+    ]},
+    { id: 'g6-e2', title: 'جغرافيا - المحيطات', questions:[
+      { text: 'أكبر محيط في العالم هو', choices:['الأطلسي','الهادي','الهندي','المتجمد'], answer:'الهادي' },
+      { text: 'المحيط الذي يجاور أفريقيا من الجنوب هو', choices:['الهادي','الهندي','الأطلسي','القاري'], answer:'الهندي' },
+      { text: 'المحيط القطبي الشمالي صغير نسبياً صحيح أم خطأ؟', choices:['صحيح','خطأ','ربما','لا أعلم'], answer:'صحيح' }
+    ]}
+  ],
+  g7: [
+    { id: 'g7-e1', title: 'اللغة الانجليزية - كلمات', questions:[
+      { text: 'ترجمة "كتاب" إلى إنجليزي هي', choices:['Book','Pen','Chair','Table'], answer:'Book' },
+      { text: 'What is the opposite of "big"?', choices:['small','large','huge','tall'], answer:'small' },
+      { text: 'How many letters in "cat"?', choices:['2','3','4','5'], answer:'3' }
+    ]},
+    { id: 'g7-e2', title: 'علوم عامة - جسم الإنسان', questions:[
+      { text: 'عضو يضخ الدم هو', choices:['الكبد','الرئتين','القلب','المخ'], answer:'القلب' },
+      { text: 'الدم يتدفق داخل', choices:['العظام','الأوردة والشرايين','الجلد','الأسنان'], answer:'الأوردة والشرايين' },
+      { text: 'الهيكل العظمي يساعد على', choices:['التنفس','الحركة','التذوق','الشعور'], answer:'الحركة' }
+    ]}
+  ]
+};
+
+/* ===== وظائف التطبيق ===== */
+const gradeSelect = document.getElementById('gradeSelect');
+const examsList = document.getElementById('examsList');
+const startBtn = document.getElementById('startBtn');
+const studentNameInput = document.getElementById('studentName');
+const welcomeView = document.getElementById('welcomeView');
+const examView = document.getElementById('examView');
+const examTitleEl = document.getElementById('examTitle');
+const examMeta = document.getElementById('examMeta');
+const questionsArea = document.getElementById('questionsArea');
+const finishBtn = document.getElementById('finishBtn');
+const examMsg = document.getElementById('examMsg');
+const resultView = document.getElementById('resultView');
+const scoreBox = document.getElementById('scoreBox');
+const detailsArea = document.getElementById('detailsArea');
+const sendWhatsBtn = document.getElementById('sendWhatsBtn');
+const saveLocalBtn = document.getElementById('saveLocalBtn');
+const backBtn = document.getElementById('backBtn');
+const historyEl = document.getElementById('history');
+const exportCsvBtn = document.getElementById('exportCsv');
+const clearHistoryBtn = document.getElementById('clearHistory');
+
+let currentExam = null;
+let chosenAnswers = {}; // { questionIndex: choice }
+
+function init(){
+  // populate grades
+  GRADES.forEach(g=>{
+    const opt = document.createElement('option');
+    opt.value = g.id; opt.textContent = g.name;
+    gradeSelect.appendChild(opt);
+  });
+  gradeSelect.addEventListener('change', onGradeChange);
+  startBtn.addEventListener('click', onStart);
+  finishBtn.addEventListener('click', onFinish);
+  sendWhatsBtn.addEventListener('click', onSendWhats);
+  saveLocalBtn.addEventListener('click', onSaveLocal);
+  backBtn.addEventListener('click', onBack);
+  exportCsvBtn.addEventListener('click', exportCsv);
+  clearHistoryBtn.addEventListener('click', clearAllHistory);
+
+  loadHistory();
+  // auto-select first grade
+  gradeSelect.value = GRADES[0].id;
+  onGradeChange();
+}
+
+function onGradeChange(){
+  const gid = gradeSelect.value;
+  examsList.innerHTML = '';
+  if(!EXAMS[gid]) return;
+  EXAMS[gid].forEach(ex=>{
+    const div = document.createElement('div');
+    div.className = 'exam-item';
+    div.innerHTML = `<div>
+      <div style="font-weight:700">${ex.title}</div>
+      <small class="muted">${ex.questions.length} أسئلة</small>
+    </div>
+    <div>
+      <button class="small-btn" onclick="selectExam('${gid}','${ex.id}')">اختار</button>
+    </div>`;
+    examsList.appendChild(div);
+  });
+}
+
+function selectExam(gid, exid){
+  // set as selected visually
+  gradeSelect.value = gid;
+  const ex = EXAMS[gid].find(e=>e.id===exid);
+  if(!ex) return;
+  currentExam = { gradeId: gid, gradeName: GRADES.find(x=>x.id===gid).name, exam: ex };
+  examTitleEl.textContent = ex.title;
+  examMeta.textContent = `${currentExam.gradeName} — ${ex.questions.length} سؤال`;
+  // prepare questions area
+  questionsArea.innerHTML = '';
+  chosenAnswers = {};
+  ex.questions.forEach((q, idx)=>{
+    const qDiv = document.createElement('div');
+    qDiv.className = 'q-box';
+    qDiv.innerHTML = `<div style="font-weight:700">السؤال ${idx+1}</div><div style="margin:6px 0 10px">${q.text}</div>`;
+    const choicesDiv = document.createElement('div');
+    choicesDiv.className = 'choices';
+    q.choices.forEach(choice=>{
+      const id = `q${idx}_${Math.random().toString(36).slice(2,7)}`;
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="radio" name="q${idx}" value="${escapeHtml(choice)}"> ${escapeHtml(choice)}`;
+      label.addEventListener('click', ()=> {
+        // mark selected style
+        Array.from(choicesDiv.querySelectorAll('label')).forEach(l=>l.classList.remove('selected'));
+        label.classList.add('selected');
+      });
+      choicesDiv.appendChild(label);
+    });
+    qDiv.appendChild(choicesDiv);
+    questionsArea.appendChild(qDiv);
+  });
+  // show exam view
+  welcomeView.style.display = 'none';
+  resultView.style.display = 'none';
+  examView.style.display = 'block';
+  examMsg.textContent = '';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function onStart(){
+  if(!currentExam){
+    examMsg.textContent = 'اختر امتحانًا أولاً بالضغط على زر "اختار".';
+    return;
+  }
+  const sName = (studentNameInput.value || '').trim();
+  if(!sName){
+    examMsg.textContent = 'اكتب اسم الطالب قبل البدء.';
+    return;
+  }
+  examMsg.textContent = '';
+  // ensure first question shown
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function onFinish(){
+  if(!currentExam) return;
+  // collect answers
+  const answers = {};
+  const qcount = currentExam.exam.questions.length;
+  for(let i=0;i<qcount;i++){
+    const checked = document.querySelector(`input[name="q${i}"]:checked`);
+    answers[i] = checked ? decodeHtml(checked.value) : null;
+  }
+  // grade
+  let correct = 0;
+  const details = [];
+  currentExam.exam.questions.forEach((q, idx)=>{
+    const given = answers[idx];
+    const ok = given !== null && String(given).trim() === String(q.answer).trim();
+    if(ok) correct++;
+    details.push({ index: idx+1, question: q.text, given: given, answer: q.answer, ok });
+  });
+  const scorePercent = Math.round((correct / qcount) * 100);
+  showResult(scorePercent, correct, qcount, details);
+}
+
+function showResult(percent, correct, total, details){
+  examView.style.display = 'none';
+  resultView.style.display = 'block';
+  scoreBox.innerHTML = `<div style="font-size:22px;font-weight:800">${percent}%</div>
+    <div class="muted">${correct} من ${total} إجابات صحيحة</div>
+    <div style="margin-top:8px"><span class="result-badge ${percent>=50?'success':'danger'}">${percent>=50? 'ناجح':'ضعيف'}</span></div>`;
+
+  // details list
+  detailsArea.innerHTML = '';
+  details.forEach(d=>{
+    const div = document.createElement('div');
+    div.style.padding='8px';
+    div.style.marginBottom='8px';
+    div.style.borderRadius='8px';
+    div.style.background='rgba(255,255,255,0.02)';
+    div.innerHTML = `<div style="font-weight:700">السؤال ${d.index}</div>
+      <div style="margin-top:6px">${escapeHtml(d.question)}</div>
+      <div style="margin-top:6px" class="muted">إجابتك: <strong>${escapeHtml(d.given||'لم تجب')}</strong> — الإجابة الصحيحة: <strong>${escapeHtml(d.answer)}</strong></div>`;
+    detailsArea.appendChild(div);
+  });
+
+  // attach data for saving / sending
+  resultView.dataset.score = percent;
+  resultView.dataset.correct = correct;
+  resultView.dataset.total = total;
+  resultView.dataset.details = JSON.stringify(details);
+  resultView.dataset.examTitle = currentExam.exam.title;
+  resultView.dataset.gradeName = currentExam.gradeName;
+  resultView.dataset.studentName = studentNameInput.value.trim();
+}
+
+function onSendWhats(){
+  const name = resultView.dataset.studentName || 'طالب';
+  const grade = resultView.dataset.gradeName || '';
+  const examTitle = resultView.dataset.examTitle || '';
+  const score = resultView.dataset.score || '';
+  const message = `الطالب: ${name}%0Aالصف: ${grade}%0Aالامتحان: ${examTitle}%0Aالدرجة: ${score}%25`;
+  const url = `https://wa.me/${WHATS_NUMBER}?text=${message}`;
+  window.open(url, '_blank');
+}
+
+function onSaveLocal(){
+  const rec = {
+    id: 'r_' + Date.now(),
+    timestamp: new Date().toISOString(),
+    student: resultView.dataset.studentName || 'طالب',
+    grade: resultView.dataset.gradeName || '',
+    exam: resultView.dataset.examTitle || '',
+    score: parseInt(resultView.dataset.score||0),
+    correct: parseInt(resultView.dataset.correct||0),
+    total: parseInt(resultView.dataset.total||0),
+    details: JSON.parse(resultView.dataset.details||'[]')
+  };
+  const list = loadResults();
+  list.unshift(rec);
+  localStorage.setItem('exam_results', JSON.stringify(list));
+  loadHistory();
+  alert('تم حفظ النتيجة محليًا');
+}
+
+function onBack(){
+  resultView.style.display = 'none';
+  examView.style.display = 'none';
+  welcomeView.style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ===== history & storage ===== */
+function loadResults(){
+  try{
+    const raw = localStorage.getItem('exam_results');
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function loadHistory(){
+  const list = loadResults();
+  historyEl.innerHTML = '';
+  if(list.length===0){ historyEl.innerHTML = '<div class="muted">لا توجد نتائج محفوظة بعد.</div>'; return; }
+  list.forEach(r=>{
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<div>
+      <div style="font-weight:700">${escapeHtml(r.student)}</div>
+      <div class="muted">${escapeHtml(r.grade)} — ${escapeHtml(r.exam)}</div>
+      <div class="muted" style="font-size:12px;margin-top:6px">${new Date(r.timestamp).toLocaleString()}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-weight:800">${r.score}%</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+        <button class="small-btn" onclick='replayResult("${r.id}")'>عرض</button>
+        <button class="small-btn" onclick='deleteResult("${r.id}")'>حذف</button>
+      </div>
+    </div>`;
+    historyEl.appendChild(div);
+  });
+}
+function deleteResult(id){
+  let list = loadResults();
+  list = list.filter(r=>r.id!==id);
+  localStorage.setItem('exam_results', JSON.stringify(list));
+  loadHistory();
+}
+function replayResult(id){
+  const list = loadResults();
+  const r = list.find(x=>x.id===id);
+  if(!r) return;
+  // populate result view
+  resultView.style.display = 'block';
+  welcomeView.style.display = 'none';
+  examView.style.display = 'none';
+  scoreBox.innerHTML = `<div style="font-size:22px;font-weight:800">${r.score}%</div>
+    <div class="muted">${r.correct} من ${r.total} إجابات صحيحة</div>`;
+  detailsArea.innerHTML = '';
+  r.details.forEach(d=>{
+    const div = document.createElement('div');
+    div.style.padding='8px';div.style.marginBottom='8px';div.style.borderRadius='8px';div.style.background='rgba(255,255,255,0.02)';
+    div.innerHTML = `<div style="font-weight:700">السؤال ${d.index}</div>
+      <div style="margin-top:6px">${escapeHtml(d.question)}</div>
+      <div style="margin-top:6px" class="muted">إجابتك: <strong>${escapeHtml(d.given||'لم تجب')}</strong> — الإجابة الصحيحة: <strong>${escapeHtml(d.answer)}</strong></div>`;
+    detailsArea.appendChild(div);
+  });
+  resultView.dataset.score = r.score;
+  resultView.dataset.correct = r.correct;
+  resultView.dataset.total = r.total;
+  resultView.dataset.details = JSON.stringify(r.details);
+  resultView.dataset.examTitle = r.exam;
+  resultView.dataset.gradeName = r.grade;
+  resultView.dataset.studentName = r.student;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function exportCsv(){
+  const list = loadResults();
+  if(list.length===0){ alert('لا توجد نتائج لتصدير'); return; }
+  const rows = [['timestamp','student','grade','exam','score','correct','total','details']];
+  list.forEach(r=>{
+    rows.push([r.timestamp, r.student, r.grade, r.exam, String(r.score), String(r.correct), String(r.total), JSON.stringify(r.details)]);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'exam_results.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ===== utilities ===== */
+function clearAllHistory(){
+  if(!confirm('هل تريد حذف كل النتائج المحفوظة؟')) return;
+  localStorage.removeItem('exam_results');
+  loadHistory();
+}
+function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function decodeHtml(s){ return s; } // values were saved escaped; here kept simple
+function loadScriptSafe(){ } // placeholder
+
+init();
+
+// expose some functions to window for inline onclick handlers
+window.selectExam = selectExam;
+window.replayResult = replayResult;
+window.deleteResult = deleteResult;
+</script>
+</body>
+</html>
